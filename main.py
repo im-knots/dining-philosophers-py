@@ -39,7 +39,7 @@ class Philosopher:
     # Chow time!
     def eating(self):
         print(self.name + " is eating")
-        time.sleep(5)
+        time.sleep(1)
         # Release locks on both fork semaphores in list forks
         self.forks[self.seat].release()
         self.forks[self.seat - 1].release()
@@ -55,8 +55,7 @@ class Philosopher:
         return "name: {}, seat: {}, forkLeft: {}, forkRight: {}, lastAte: {}s ago".format(self.name, self.seat, self.forkLeft, self.forkRight, ateSecondsAgo)
 
 
-def actions(name, seat):
-    global forks
+def actions(name, seat, forks):
     # They all just ate before they arrived :D
     lastAte = time.time()
 
@@ -75,13 +74,13 @@ def actions(name, seat):
 
 if __name__ == '__main__':
     # Construct a list of 5 semaphores, 1 for each fork
-    forks: list() = []
+    forks = []
     for i in range(5):
         forks.append(threading.Semaphore())
 
     # Create the philosophers, assign them seats, and have then start taking actions
-    attendees: list() = ["plato", "aristotle", "camus", "sartre", "foucault"]
+    attendees = ["plato", "aristotle", "camus", "sartre", "foucault"]
     for seat in range(len(attendees)):
-        t = threading.Thread(target=actions, args=(attendees[seat], seat,))
+        t = threading.Thread(target=actions, args=(attendees[seat], seat, forks,))
         t.start()
    
