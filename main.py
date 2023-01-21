@@ -2,88 +2,88 @@ import threading
 import random
 import time
 
-attendees = ["plato", "aristotle", "camus", "sartre", "foucault"]
-
 class Philosopher:
-    def __init__(self, name, forkLeft, forkRight, lastAte):
+    # Constructor
+    def __init__(self, name, forkLeft, forkRight, seat, forks, lastAte):
         self.name = name
         self.forkLeft = forkLeft
         self.forkRight = forkRight
+        self.seat = seat
+        self.forks = forks
         self.lastAte = lastAte
     
-    def pick_up_fork_left(self):
-        global fork
-        fork.acquire()
-        self.forkLeft = True
-        print(self.name + " took a fork on the left")
-        print(self.name + " " + str(self.forkLeft) + " " + str(self.forkRight))
-    
-    def pick_up_fork_right(self):
-        global fork
-        fork.acquire()
-        self.forkRight = True
-        print(self.name + " took a fork on the right")
-        print(self.name + " " + str(self.forkLeft) + " " + str(self.forkRight))
-    
+    # Check if the Philosopher has a fork in both hands
     def check_forks(self):
         if self.forkLeft & self.forkRight == True:
-            print(self.name + " is ready to eat")
             return True
-        elif self.forkLeft & self.forkRight == False:
-            print(self.name + " is not ready to eat")
-            print(self.name + " " + str(self.forkLeft) + " " + str(self.forkRight))
+        else:
             return False
+    
+    # Randomize which hand the Philosopher uses first, get the fork, then get the fork for the other hand
+    def get_forks(self):
+        choices = [Philosopher.pick_up_fork_left, Philosopher.pick_up_fork_right]
+        choice = random.randint(0, 1)
+        choices[choice](self)
+        choices[choice - 1](self)
 
-    def thinking(self):
-        print(self.name + " is thinking")
-        time.sleep(10)
+    # Getting a lock on the fork semaphore at the index to the "left"
+    def pick_up_fork_left(self):
+        self.forkLeft = self.forks[self.seat].acquire()
+        print(Philosopher.__str__(self))
+    
+    # Getting a lock on the fork semaphore at the index to the "right"
+    def pick_up_fork_right(self):
+        self.forkRight = self.forks[self.seat - 1].acquire()
+        print(Philosopher.__str__(self))
 
+    # Chow time!
     def eating(self):
-        global fork
         print(self.name + " is eating")
         time.sleep(5)
-        print(self.name + " is done eating, puts down their forks, and goes to think")
-        for i in range(2):
-            fork.release()
+        # Release locks on both fork semaphores in list forks
+        self.forks[self.seat].release()
+        self.forks[self.seat - 1].release()
+        # Empty the Philosophers hands
         self.forkLeft = False
         self.forkRight = False
-        print(self.name + " " + str(self.forkLeft) + " " + str(self.forkRight))
+        # Log the last time the Philosopher ate
         self.lastAte = time.time()
-
-   
-    def hungry(self):
-        print(self.name + " is hungry")
     
-    def share_fork(self):
-        global fork
-        print(self.name + " isnt hungry so will share a fork")
-        fork.release()
-
+    # Defines the str() object to be returned when print(p) is called
     def __str__(self):
-        return "Name: {}, LFork: {}, RFork: {}".format(self.name, self.forkLeft, self.forkRight)  
+        ateSecondsAgo = format(time.time() - self.lastAte, 'f')
+        return "name: {}, seat: {}, forkLeft: {}, forkRight: {}, lastAte: {}s ago".format(self.name, self.seat, self.forkLeft, self.forkRight, ateSecondsAgo)
 
 
-def activity(name):
-    p = Philosopher(name, False, False, time.time())
+def actions(name, seat):
+    global forks
+    # They all just ate before they arrived :D
+    lastAte = time.time()
 
-    def get_forks():
-        while p.check_forks() == False:
-            random.choice([p.pick_up_fork_left(), p.pick_up_fork_right()])
-            print(p.name + " last ate " + format(time.time() - p.lastAte, 'f') + " seconds ago")
-            if int(time.time() - p.lastAte) > 5:
-                p.hungry()
+    # Create the philosopher with both hands empty and knowledge of the list of semaphores
+    p = Philosopher(name, False, False, seat, forks, lastAte)
+
+    # Keep the party going forever
     while True:
-        get_forks()
+        print(p)
+        # Check to see if the philosopher has a fork in each hand
+        while p.check_forks() == False:
+            # Keep trying to get forks!
+            if time.time() - p.lastAte > 3:
+                print(p.name + " is starving")
+            p.get_forks()
         p.eating()
-        p.thinking()
-
-
 
 
 if __name__ == '__main__':
-    fork = threading.Semaphore(5)
+    # Construct a list of 5 semaphores, 1 for each fork
+    forks: list() = []
+    for i in range(5):
+        forks.append(threading.Semaphore())
 
-    for i in attendees:    
-        t = threading.Thread(target=activity, args=(i,))
+    # Create the philosophers, assign them seats, and have then start taking actions
+    attendees: list() = ["plato", "aristotle", "camus", "sartre", "foucault"]
+    for seat in range(len(attendees)):
+        t = threading.Thread(target=actions, args=(attendees[seat], seat,))
         t.start()
-    
+   
