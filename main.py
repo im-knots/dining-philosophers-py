@@ -76,3 +76,14 @@ def activity(name):
         get_forks()
         p.eating()
         p.thinking()
+
+
+
+
+if __name__ == '__main__':
+    fork = threading.Semaphore(5)
+
+    for i in attendees:    
+        t = threading.Thread(target=activity, args=(i,))
+        t.start()
+    
