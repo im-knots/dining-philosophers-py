@@ -69,8 +69,6 @@ def actions(name, seat):
         # Check to see if the philosopher has a fork in each hand
         while p.check_forks() == False:
             # Keep trying to get forks!
-            if time.time() - p.lastAte > 3:
-                print(p.name + " is starving")
             p.get_forks()
         p.eating()
 
